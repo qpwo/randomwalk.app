@@ -13,7 +13,7 @@
             height: 100vh;
         }
 
-        .compass {
+        #compass {
             position: relative;
             width: 320px;
             height: 320px;
@@ -22,7 +22,7 @@
             margin: auto;
         }
 
-        .compass>.arrow {
+        #compass>#arrow {
             position: absolute;
             width: 0;
             height: 0;
@@ -35,8 +35,8 @@
             z-index: 1;
         }
 
-        .compass>.compass-circle,
-        .compass>.my-point {
+        #compass>#compassCircle,
+        #compass>#goalPoint {
             position: absolute;
             width: 90%;
             height: 90%;
@@ -45,11 +45,11 @@
             transform: translate(-50%, -50%);
             transition: transform 0.1s ease-out;
             /* background: url('<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd"><path d="M11 2.206l-6.235 7.528-.765-.645 7.521-9 7.479 9-.764.646-6.236-7.53v21.884h-1v-21.883z"/></svg>') center no-repeat; */
-            background: url(https://purepng.com/public/uploads/large/purepng.com-compasscompassinstrumentnavigationcardinal-directionspointsdiagram-1701527842316onq7x.png) center no-repeat;
+            background: url("arrow.png") center no-repeat;
             background-size: contain;
         }
 
-        .compass>.my-point {
+        #compass>#goalPoint {
             opacity: 0;
             width: 20%;
             height: 20%;
@@ -58,48 +58,63 @@
             transition: opacity 0.5s ease-out;
         }
 
-        #startCompass {
+        /* #startCompass {
             margin-bottom: auto;
-        }
+        } */
     </style>
 </head>
 
 <body>
-    <div class="compass">
-        <div class="arrow"></div>
-        <div class="compass-circle"></div>
-        <div class="my-point"></div>
+    <div id="compass">
+        <div id="arrow"></div>
+        <div id="compassCircle"></div>
+        <div id="goalPoint"></div>
     </div>
-    <button class="startCompass">Start compass</button>
     <div>
-        <input id="range" type="range" min="0" value="0" max="5" step="1" /> <span id="chosenRange">-</span>
-        <button id="updateCoords">updateCoords</button><br />
-        <button id="updateGoal">updateGoal</button><br />
-        <p id="coords-status">Coords status</p>
-        <p id="compass-status">Compass status</p>
+        <div><button id="startCompass">Start compass</button></div>
+        <div>Last location: <span id="coordsStatus">...</span> <button id="updateCoords">Update</button></div>
+        <div>Goal range: <input id="range" type="range" min="0" value="0" max="7" step="1" />
+            <span id="chosenRange">-</span>
+        </div>
+        <div>Going to <span id="goalCoords">...</span><button id="newGoal">Change</button></div>
+        <div>Compass status: <span id="compassStatus">...</span></div>
+        <button id="copyUrl">copyUrl</button>
     </div>
+    <textarea id="url" style="opacity: 0;"></textarea>
 </body>
 
 <script>
-    "use strict"
-    const rangeElm = document.querySelector('#range')
-    const chosenRangeElm = document.querySelector('#chosenRange')
-    const coordsStatusElm = document.querySelector('#coords-status')
-    const compassStatusElm = document.querySelector('#compass-status')
-    const compassCircleElm = document.querySelector(".compass-circle")
-    const myPointElm = document.querySelector(".my-point")
+    "use strict";
+
+
+    const rangeElm = document.getElementById("range")
+    const chosenRangeElm = document.getElementById("chosenRange")
+    const coordsStatusElm = document.getElementById("coordsStatus")
+    const compassStatusElm = document.getElementById("compassStatus")
+    const compassCircleElm = document.getElementById("compassCircle")
+    const goalCoordsElm = document.getElementById("goalCoords")
+    const goalPointElm = document.getElementById("goalPoint")
 
     let pointDegree
     let coefficient
     const curCoords = { latitude: null, longitude: null }
     const goalCoords = { latitude: null, longitude: null }
-    const coefficients = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3]
+    const coefficients = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0]
+
+    if (parent.location.hash !== "") {
+        const pair = parent.location.hash.slice(1).split(',')
+        goalCoords.latitude = Number(pair[0])
+        goalCoords.longitude = Number(pair[1])
+        goalCoordsElm.textContent = parent.location.hash.slice(1)
+    }
+
 
     const isIOS =
         navigator.userAgent.match(/(iPod|iPhone|iPad)/) &&
         navigator.userAgent.match(/AppleWebKit/)
 
     function startCompass() {
+        compassStatusElm.textContent = "Attempting to start compass..."
         if (!isIOS) {
             window.addEventListener("deviceorientationabsolute", deviceOrientationHandler, true)
         }
@@ -107,6 +122,7 @@
             DeviceOrientationEvent.requestPermission()
                 .then((response) => {
                     if (response === "granted") {
+                        compassStatusElm.textContent = "Compass success"
                         window.addEventListener("deviceorientation", deviceOrientationHandler, true)
                     } else {
                         compassStatusElm.textContent = "⚠️ Orientation permission is required to point you in the right direction ⚠️"
@@ -115,11 +131,11 @@
                 .catch(() => alert("⚠️ Compass not supported by browser/device ⚠️"))
         }
     }
-    document.getElementById("#startCompass").addEventListener("click", startCompass)
+    document.getElementById("startCompass").addEventListener("click", startCompass)
 
 
     function deviceOrientationHandler(e) {
-        compass = e.webkitCompassHeading || Math.abs(e.alpha - 360)
+        const compass = e.webkitCompassHeading || Math.abs(e.alpha - 360)
         compassCircleElm.style.transform = `translate(-50%, -50%) rotate(${-compass}deg)`
 
         // ±15 degree
@@ -127,9 +143,9 @@
             pointDegree + 15 > Math.abs(compass)) ||
             pointDegree > Math.abs(compass + 15) ||
             pointDegree < Math.abs(compass)) {
-            myPointElm.style.opacity = 0
+            goalPointElm.style.opacity = 0
         } else if (pointDegree) {
-            myPointElm.style.opacity = 1
+            goalPointElm.style.opacity = 1
         }
     }
 
@@ -143,29 +159,33 @@
     function setNewGoal() {
         goalCoords.latitude = coefficient * Math.random() + curCoords.latitude
         goalCoords.longitude = coefficient * Math.random() + curCoords.longitude
+        goalCoordsElm.textContent = toString(goalCoords)
+        parent.location.hash = goalCoords.latitude.toFixed(5) + ',' + goalCoords.longitude.toFixed(5)
     }
-    document.querySelector('#new-goal').addEventListener('click', setNewGoal)
+    document.getElementById("newGoal").addEventListener("click", setNewGoal)
 
+    function toString(coords) {
+        return `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`
+    }
 
     function updateCoords() {
         if (!navigator.geolocation) {
-            coordsStatusElm.textContent = 'Geolocation is not supported by your browser/device :('
+            coordsStatusElm.textContent = "Geolocation is not supported by your browser/device :("
         } else {
-            coordsStatusElm.textContent = 'Locating…'
+            coordsStatusElm.textContent = "Locating…"
             navigator.geolocation.getCurrentPosition(success, error)
         }
         function success(position) {
             curCoords.latitude = position.coords.latitude
             curCoords.longitude = position.coords.longitude
             pointDegree = calcAngle(curCoords, goalCoords)
-
-            coordsStatusElm.textContent = ''
+            coordsStatusElm.textContent = toString(curCoords)
         }
         function error() {
-            coordsStatusElm.textContent = 'Unable to retrieve your location :('
+            coordsStatusElm.textContent = "Unable to retrieve your location :("
         }
     }
-    document.querySelector('#updateCoords').addEventListener('click', updateCoords)
+    document.getElementById("updateCoords").addEventListener("click", updateCoords)
 
 
     function calcDistance({ latitude: lat1, longitude: lon1 }, { latitude: lat2, longitude: lon2 }) {
@@ -201,6 +221,15 @@
         const result = Math.round(psi)
         return result > 0 ? result : result + 360
     }
+
+    function copyUrl() {
+        const urlElm = document.getElementById("url");
+        urlElm.innerHTML = window.location.href;
+        urlElm.select()
+        document.execCommand("copy")
+        console.log("copied", window.location.href, "to clipboard")
+    }
+    document.getElementById("copyUrl").addEventListener("click", copyUrl)
 
 </script>
 
