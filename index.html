@@ -58,7 +58,7 @@
             transition: opacity 0.5s ease-out;
         }
 
-        .start-btn {
+        #startCompass {
             margin-bottom: auto;
         }
     </style>
@@ -70,13 +70,13 @@
         <div class="compass-circle"></div>
         <div class="my-point"></div>
     </div>
-    <button class="start-btn">Start compass</button>
+    <button class="startCompass">Start compass</button>
     <div>
         <input id="range" type="range" min="0" value="0" max="5" step="1" /> <span id="chosenRange">-</span>
-        <button id="find-me">Show my location</button><br />
-        <button id="new-goal">Get a new goal</button><br />
-        <p id="coords-status"></p>
-        <a id="map-link" target="_blank"></a>
+        <button id="updateCoords">updateCoords</button><br />
+        <button id="updateGoal">updateGoal</button><br />
+        <p id="coords-status">Coords status</p>
+        <p id="compass-status">Compass status</p>
     </div>
 </body>
 
@@ -85,11 +85,9 @@
     const rangeElm = document.querySelector('#range')
     const chosenRangeElm = document.querySelector('#chosenRange')
     const coordsStatusElm = document.querySelector('#coords-status')
+    const compassStatusElm = document.querySelector('#compass-status')
     const compassCircleElm = document.querySelector(".compass-circle")
     const myPointElm = document.querySelector(".my-point")
-    const startBtn = document.querySelector(".start-btn")
-    const findMeBtn = document.querySelector('#find-me')
-    const newGoalBtn = document.querySelector('#new-goal')
 
     let pointDegree
     let coefficient
@@ -101,29 +99,24 @@
         navigator.userAgent.match(/(iPod|iPhone|iPad)/) &&
         navigator.userAgent.match(/AppleWebKit/)
 
-    function initCompass() {
-        startBtn.addEventListener("click", startCompass)
-        navigator.geolocation.getCurrentPosition(locationHandler)
-
+    function startCompass() {
         if (!isIOS) {
             window.addEventListener("deviceorientationabsolute", deviceOrientationHandler, true)
         }
-    }
-    initCompass()
-
-    function startCompass() {
         if (isIOS) {
             DeviceOrientationEvent.requestPermission()
                 .then((response) => {
                     if (response === "granted") {
                         window.addEventListener("deviceorientation", deviceOrientationHandler, true)
                     } else {
-                        alert("Orientation permission is required to point you in the right direction")
+                        compassStatusElm.textContent = "⚠️ Orientation permission is required to point you in the right direction ⚠️"
                     }
                 })
-                .catch(() => alert("not supported"))
+                .catch(() => alert("⚠️ Compass not supported by browser/device ⚠️"))
         }
     }
+    document.getElementById("#startCompass").addEventListener("click", startCompass)
+
 
     function deviceOrientationHandler(e) {
         compass = e.webkitCompassHeading || Math.abs(e.alpha - 360)
@@ -140,15 +133,58 @@
         }
     }
 
-    function locationHandler(position) {
-        curCoords.latitude = position.coords.latitude
-        curCoords.longitude = position.coords.longitude
-        pointDegree = calcAngle(curCoords, goalCoords)
+    rangeElm.oninput = function updateCoefficient() {
+        coefficient = coefficients[this.value]
+        chosenRangeElm.innerHTML = coefficients[this.value]
+    }
+    rangeElm.oninput() // set default value
 
-        if (pointDegree < 0) {
-            pointDegree = pointDegree + 360
+
+    function setNewGoal() {
+        goalCoords.latitude = coefficient * Math.random() + curCoords.latitude
+        goalCoords.longitude = coefficient * Math.random() + curCoords.longitude
+    }
+    document.querySelector('#new-goal').addEventListener('click', setNewGoal)
+
+
+    function updateCoords() {
+        if (!navigator.geolocation) {
+            coordsStatusElm.textContent = 'Geolocation is not supported by your browser/device :('
+        } else {
+            coordsStatusElm.textContent = 'Locating…'
+            navigator.geolocation.getCurrentPosition(success, error)
+        }
+        function success(position) {
+            curCoords.latitude = position.coords.latitude
+            curCoords.longitude = position.coords.longitude
+            pointDegree = calcAngle(curCoords, goalCoords)
+
+            coordsStatusElm.textContent = ''
+        }
+        function error() {
+            coordsStatusElm.textContent = 'Unable to retrieve your location :('
         }
     }
+    document.querySelector('#updateCoords').addEventListener('click', updateCoords)
+
+
+    function calcDistance({ latitude: lat1, longitude: lon1 }, { latitude: lat2, longitude: lon2 }) {
+        var R = 6371 // kilometers
+        var dLat = toRad(lat2 - lat1)
+        var dLon = toRad(lon2 - lon1)
+        var lat1 = toRad(lat1)
+        var lat2 = toRad(lat2)
+
+        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2)
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        var d = R * c
+        return d // kilometers
+        function toRad(Value) {
+            return Value * Math.PI / 180
+        }
+    }
+
 
     function calcAngle(source, target) {
         const phiS = (source.latitude * Math.PI) / 180.0
@@ -162,38 +198,10 @@
                 Math.cos(phiS) * Math.tan(phiT) -
                 Math.sin(phiS) * Math.cos(lambdaT - lambdaS)
             )
-        return Math.round(psi)
+        const result = Math.round(psi)
+        return result > 0 ? result : result + 360
     }
 
-    rangeElm.oninput = function updateCoefficient() {
-        coefficient = coefficients[this.value]
-        chosenRangeElm.innerHTML = coefficients[this.value]
-    }
-    rangeElm.oninput() // set default value
-
-    function setNewGoal() {
-        goalCoords.latitude = coefficient * Math.random() + curCoords.latitude
-        goalCoords.longitude = coefficient * Math.random() + curCoords.longitude
-    }
-    newGoalBtn.addEventListener('click', setNewGoal)
-
-    function findMe() {
-        if (!navigator.geolocation) {
-            status.textContent = 'Geolocation is not supported by your browser/device :('
-        } else {
-            status.textContent = 'Locating…'
-            navigator.geolocation.getCurrentPosition(success, error)
-        }
-        function success(position) {
-            curCoords.latitude = position.coords.latitude
-            curCoords.longitude = position.coords.longitude
-            status.textContent = ''
-        }
-        function error() {
-            status.textContent = 'Unable to retrieve your location :('
-        }
-    }
-    findMeBtn.addEventListener('click', findMe)
 </script>
 
 </html>
