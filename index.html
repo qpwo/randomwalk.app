@@ -77,19 +77,19 @@
         <div>Goal range: <input id="range" type="range" min="0" value="0" max="7" step="1" />
             <span id="chosenRange">-</span>
         </div>
-        <div>
+        <!-- <div>
             <input type="radio" id="phoneCompass" name="compassType" value="phoneCompass">
             <label for="phoneCompass">Phone compass</label>
             <input type="radio" id="radioCompass" name="compassType" value="radioCompass">
             <label for="radioCompass">Physical compass</label>
-        </div>
+        </div> -->
 
         <div>Going to <span id="goalCoords">...</span><button id="newGoal">Change</button></div>
         <div>Compass status: <span id="compassStatus">...</span></div>
         <div><button id="copyUrl">copyUrl</button></div>
-        <div><button>Donate</button></div>
+        <!-- <div><button>Donate</button></div> -->
     </div>
-    <textarea id="url" style="opacity: 0; visibility: ;"></textarea>
+    <textarea id="url" style="opacity: 0;"></textarea>
 </body>
 
 <script>
@@ -152,7 +152,7 @@
 
     function deviceOrientationHandler(e) {
         const compass = e.webkitCompassHeading || Math.abs(e.alpha - 360)
-        compassArrowElm.style.transform = `rotate(${-compass}deg)`
+        compassArrowElm.style.transform = `rotate(${pointDegree - compass}deg)`
 
         // ±15 degree
         if ((pointDegree < Math.abs(compass) &&
@@ -161,7 +161,7 @@
             pointDegree < Math.abs(compass)) {
             goalPointElm.style.opacity = 0
         } else if (pointDegree) {
-            goalPointElm.style.opacity = 1
+            goalPointElm.style.opacity = .5
         }
     }
 
@@ -173,9 +173,10 @@
 
 
     function setNewGoal() {
-        goalCoords.latitude = coefficient * Math.random() + curCoords.latitude
-        goalCoords.longitude = coefficient * Math.random() + curCoords.longitude
+        goalCoords.latitude = coefficient * 2 * (Math.random() - .5) + curCoords.latitude
+        goalCoords.longitude = coefficient * 2 * (Math.random() - .5) + curCoords.longitude
         goalCoordsElm.textContent = toString(goalCoords)
+        pointDegree = calcAngle(curCoords, goalCoords)
         parent.location.hash = goalCoords.latitude.toFixed(5) + ',' + goalCoords.longitude.toFixed(5)
     }
     document.getElementById("newGoal").addEventListener("click", setNewGoal)
@@ -203,6 +204,7 @@
         }
     }
     document.getElementById("updateCoords").addEventListener("click", updateCoords)
+    setInterval(updateCoords, 60_000)
 
 
     function calcDistance({ latitude: lat1, longitude: lon1 }, { latitude: lat2, longitude: lon2 }) {
