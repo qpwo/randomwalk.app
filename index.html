@@ -4,83 +4,92 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Document</title>
     <style>
         body {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         #compass {
-            position: relative;
+            margin-left: auto;
+            margin-right: auto;
+            background: skyblue;
             width: 320px;
             height: 320px;
             border-radius: 50%;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-            margin: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16em;
+            border: 1px solid black;
         }
 
-        #compass>#arrow {
-            position: absolute;
-            width: 0;
-            height: 0;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-style: solid;
-            border-width: 30px 20px 0 20px;
-            border-color: red transparent transparent transparent;
-            z-index: 1;
+        button {
+            font-size: large;
+            margin: 0.1em;
         }
 
-        #compass>#compassCircle,
-        #compass>#goalPoint {
+        #compassArrow,
+        #goalPoint {
             position: absolute;
-            width: 90%;
-            height: 90%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
             transition: transform 0.1s ease-out;
-            /* background: url('<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd"><path d="M11 2.206l-6.235 7.528-.765-.645 7.521-9 7.479 9-.764.646-6.236-7.53v21.884h-1v-21.883z"/></svg>') center no-repeat; */
-            background: url("arrow.png") center no-repeat;
-            background-size: contain;
         }
 
-        #compass>#goalPoint {
+        #compassArrow {
+            color: darkred
+        }
+
+        #goalPoint {
             opacity: 0;
-            width: 20%;
-            height: 20%;
+            width: 50px;
+            height: 50px;
             background: rgb(8, 223, 69);
             border-radius: 50%;
             transition: opacity 0.5s ease-out;
         }
 
-        /* #startCompass {
-            margin-bottom: auto;
-        } */
+        #gear {
+            font-size: xx-large;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #menu {
+            background: lightgrey;
+            border: 1px solid grey;
+            border-radius: 1em;
+            padding: 1em;
+        }
     </style>
 </head>
 
 <body>
     <div id="compass">
-        <div id="arrow"></div>
-        <div id="compassCircle"></div>
+        <div id="compassArrow">↑</div>
         <div id="goalPoint"></div>
     </div>
-    <div>
+    <div id="gear">⚙</div>
+    <div id="menu">
         <div><button id="startCompass">Start compass</button></div>
         <div>Last location: <span id="coordsStatus">...</span> <button id="updateCoords">Update</button></div>
         <div>Goal range: <input id="range" type="range" min="0" value="0" max="7" step="1" />
             <span id="chosenRange">-</span>
         </div>
+        <div>
+            <input type="radio" id="phoneCompass" name="compassType" value="phoneCompass">
+            <label for="phoneCompass">Phone compass</label>
+            <input type="radio" id="radioCompass" name="compassType" value="radioCompass">
+            <label for="radioCompass">Physical compass</label>
+        </div>
+
         <div>Going to <span id="goalCoords">...</span><button id="newGoal">Change</button></div>
         <div>Compass status: <span id="compassStatus">...</span></div>
-        <button id="copyUrl">copyUrl</button>
+        <div><button id="copyUrl">copyUrl</button></div>
+        <div><button>Donate</button></div>
     </div>
-    <textarea id="url" style="opacity: 0;"></textarea>
+    <textarea id="url" style="opacity: 0; visibility: ;"></textarea>
 </body>
 
 <script>
@@ -91,9 +100,11 @@
     const chosenRangeElm = document.getElementById("chosenRange")
     const coordsStatusElm = document.getElementById("coordsStatus")
     const compassStatusElm = document.getElementById("compassStatus")
-    const compassCircleElm = document.getElementById("compassCircle")
+    const compassArrowElm = document.getElementById("compassArrow")
     const goalCoordsElm = document.getElementById("goalCoords")
     const goalPointElm = document.getElementById("goalPoint")
+    const menuElm = document.getElementById("menu")
+    const gearElm = document.getElementById("gear")
 
     let pointDegree
     let coefficient
@@ -112,6 +123,11 @@
     const isIOS =
         navigator.userAgent.match(/(iPod|iPhone|iPad)/) &&
         navigator.userAgent.match(/AppleWebKit/)
+
+    function toggleMenu() {
+        menuElm.style.visibility = menuElm.style.visibility === "hidden" ? "visible" : "hidden"
+    }
+    gearElm.addEventListener("click", toggleMenu)
 
     function startCompass() {
         compassStatusElm.textContent = "Attempting to start compass..."
@@ -136,7 +152,7 @@
 
     function deviceOrientationHandler(e) {
         const compass = e.webkitCompassHeading || Math.abs(e.alpha - 360)
-        compassCircleElm.style.transform = `translate(-50%, -50%) rotate(${-compass}deg)`
+        compassArrowElm.style.transform = `rotate(${-compass}deg)`
 
         // ±15 degree
         if ((pointDegree < Math.abs(compass) &&
@@ -181,7 +197,8 @@
             pointDegree = calcAngle(curCoords, goalCoords)
             coordsStatusElm.textContent = toString(curCoords)
         }
-        function error() {
+        function error(e) {
+            console.error(e)
             coordsStatusElm.textContent = "Unable to retrieve your location :("
         }
     }
